@@ -80,8 +80,9 @@ class Fragment:
 
 
 class Task:
-    def __init__(self, node, stream, start, end):
+    def __init__(self, node, op_type, stream, start, end):
         self.node = node
+        self.opType = op_type
         self.stream = stream
         self.start = start
         self.end = end
@@ -100,13 +101,15 @@ class CostRecorder:
         self.states = []
         self.recs = []
         self.time_stamp = []
-        self.time_map = {}
+        self.time_map = {}  # time_stamp -> time
+        self.node_stream_map = {}
 
     def init(self):
         self.states = []
         self.recs = []
         self.time_stamp = []
         self.time_map = {}
+        self.node_stream_map = {}
 
     def read_file(self, path):
         with open(path, newline='') as f:
@@ -145,6 +148,7 @@ class CostRecorder:
             self.states.append(State(t))
 
         for rec in self.recs:
+            self.node_stream_map[rec.node] = rec.group
             if rec.name == "View":
                 continue
             for t in range(self.time_map[rec.start], self.time_map[rec.deq]):
@@ -155,7 +159,7 @@ class CostRecorder:
                     self.states[t].L2_frags.append(new_frag)
             for t in range(self.time_map[rec.start], self.time_map[rec.start + rec.dur]):
                 if rec.cid <= 0:
-                    new_task = Task(rec.node, rec.group, rec.start, rec.start + rec.dur)
+                    new_task = Task(rec.node, rec.name, rec.group, rec.start, rec.start + rec.dur)
                     self.states[t].tasks.append(new_task)
 
     def check_legal(self):
@@ -189,7 +193,7 @@ class CostRecorder:
 if __name__ == '__main__':
 
     recorder = CostRecorder()
-    # recorder.run("../data/avm_front_test.csv")
+    recorder.run("../data/avm_front_test.csv")
     ui = UI(recorder)
 
 
