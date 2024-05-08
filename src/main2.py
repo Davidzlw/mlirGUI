@@ -193,7 +193,7 @@ class CostRecorder:
 if __name__ == '__main__':
 
     recorder = CostRecorder()
-    recorder.run("../data/avm_front_test.csv")
+    recorder.run("../data/new_static_xea.csv")
     ui = UI(recorder)
 
 

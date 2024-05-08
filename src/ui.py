@@ -1,7 +1,6 @@
 import tkinter
-import time
 from tkinter import ttk
-from tkinter import font
+from tkinter import messagebox
 from tkinter import *
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 import numpy as np
@@ -15,7 +14,7 @@ class UI:
     def __init__(self, recorder):
         self.recorder = recorder
         self.top = tkinter.Tk()
-        self.top.title("L1/L2 Addr Analyzer 1.2")
+        self.top.title("L1/L2 Addr Analyzer 1.4")
         # top.geometry("700x400")
         self.width = 1400
         self.height = 800
@@ -25,60 +24,144 @@ class UI:
 
         self.top.mainloop()
 
+    def general_feedback(self, title, str1):
+        messagebox.showinfo(title, str1)
+
     def make_frame_mid(self, frame):
         # ========= canvas ============
         length = self.width - 150
         left = 65
-        s = self.top.winfo_screenheight() / self.height if self.top.winfo_screenheight() < self.height else 1
-        l2_canvas = Canvas(frame, bd=0, bg='#ccc', height=s*150, width=length)
-        l2_canvas.place(x=left, y=s*20)
-        Label(frame, text="0").place(x=left, y=s*180)
-        Label(frame, text="32M").place(x=left+length-15, y=s*180)
-        Label(frame, text="L2").place(x=left-40, y=s*95)
+        s = self.height / 800
+        style = ttk.Style(frame)
+        style.configure('lefttab.TNotebook', tabposition='ws')
 
-        l1_canvas = Canvas(frame, bd=2, bg='#ccc', height=s*150, width=length)
-        l1_canvas.place(x=left, y=s*210)
-        Label(frame, text="0").place(x=left, y=s*370)
-        Label(frame, text="6M").place(x=left+length-15, y=s*370)
-        Label(frame, text="L1").place(x=left-40, y=s*285)
+        # ========= l2 frame ============
+        l2_frame = LabelFrame(frame, bd=2, text="L2 addr", relief=SUNKEN)
+        l2_frame.place(x=5, y=s*5, height=s*180, width=self.width-10)
+        l2_display_choice = ttk.Notebook(l2_frame, style='lefttab.TNotebook')
+        l2_display_choice.place(x=5, y=s*5, height=s*150, width=self.width-15)
+        l2_sub_frame1 = Frame(l2_display_choice)
+        l2_canvas1 = Canvas(l2_sub_frame1, bd=0, bg='#ccc', height=s*150, width=length)
+        l2_canvas1.place(x=20, y=0)
+        l2_sub_frame2 = Frame(l2_display_choice)
+        l2_canvas2 = Canvas(l2_sub_frame2, bd=0, bg='#ccc', height=s*150, width=length)
+        l2_canvas2.place(x=20, y=0)
+        l2_display_choice.add(l2_sub_frame1, text='real\naddr')
+        l2_display_choice.add(l2_sub_frame2, text='addr\noccu')
+        # Label(frame, text="0").place(x=left, y=s*180)
+        # Label(frame, text="32M").place(x=left+length-15, y=s*180)
 
-        cost_canvas = Canvas(frame, bd=2, bg='#ccc', height=s*270, width=length)
-        cost_canvas.place(x=left, y=s*400)
+        # ========= l1 frame ============
+        l1_frame = LabelFrame(frame, bd=2, text="L1 addr", relief=SUNKEN)
+        l1_frame.place(x=5, y=s*190, height=s*185, width=self.width-10)
+        l1_display_choice = ttk.Notebook(l1_frame, style='lefttab.TNotebook')
+        l1_display_choice.place(x=5, y=s*5, height=s*150, width=self.width-15)
+        l1_sub_frame1 = Frame(l1_display_choice)
+        l1_canvas1 = Canvas(l1_sub_frame1, bd=0, bg='#ccc', height=s*150, width=length)
+        l1_canvas1.place(x=20, y=0)
+        l1_sub_frame2 = Frame(l1_display_choice)
+        l1_canvas2 = Canvas(l1_sub_frame2, bd=0, bg='#ccc', height=s*150, width=length)
+        l1_canvas2.place(x=20, y=0)
+        l1_display_choice.add(l1_sub_frame1, text='real\naddr')
+        l1_display_choice.add(l1_sub_frame2, text='addr\noccu')
+        # Label(frame, text="0").place(x=left, y=s*370)
+        # Label(frame, text="6M").place(x=left+length-15, y=s*370)
+
+        # ========= cost frame ============
+        cost_frame = LabelFrame(frame, bd=2, text="cost model", relief=SUNKEN)
+        cost_frame.place(x=5, y=s*380, height=s*290, width=self.width-10)
+        cost_canvas = Canvas(cost_frame, bd=2, bg='#ccc', height=s*270, width=length)
+        cost_canvas.place(x=left, y=0)
         streams = ["L3>>L3", "L3>>L2", "L2>>L3", "L2>>L2", "L3>>L1", "L2>>L1", "Workload", "L1>>L1", "L1>>L2", "L1>>L3"]
         colors = ["#66FF99", "#4DA041", "#7DA041", "#A9A1B3", "#5D3041",
                   "#B4AEF4", "#B1B8B2", "#488888", "#A99087", "#A99087"]
         stream_idx = {stream: i for i, stream in enumerate(streams)}
         for i, stream in enumerate(streams):
-            Label(frame, text=stream).place(x=0, y=s*400+s*30*i)
+            Button(cost_frame, text=stream).place(x=0, y=s*30*i)
 
         Label(frame, text="cycle_time =").place(x=45, y=s*730)
         cycle_time = Label(frame, text="")
         cycle_time.place(x=left+60, y=s*730)
 
-        # ========= slice  ============
         def change_l2():
-            l2_canvas.delete('all')
-            l2_canvas.clipboard_clear()
+            # ========= real addr  ============
+            l2_canvas1.delete('all')
+            l2_canvas1.clipboard_clear()
             t = stamp.get()
             frags = self.recorder.states[t].L2_frags
             for frag in frags:
-                left = int(length * frag.addr / L2_TOTAL_SIZE) + 3  # avoid missing addr close to 0
-                right = int(length * (frag.addr + frag.size) / L2_TOTAL_SIZE) + 3
-                block = l2_canvas.create_rectangle(left, 0, right, s*150,
-                                                   fill=colors[stream_idx[self.recorder.node_stream_map[frag.node]]])
-                block_tip = ToolTip(l2_canvas, tag=block, text="{}\naddr: {} - {}".format(frag.node, frag.addr, frag.addr + frag.size))
+                left = length * frag.addr / L2_TOTAL_SIZE + 3  # avoid missing addr close to 0
+                right = length * (frag.addr + frag.size) / L2_TOTAL_SIZE + 3
+                block = l2_canvas1.create_rectangle(left, 0, right, s*150,
+                                                    fill=colors[stream_idx[self.recorder.node_stream_map[frag.node]]])
+                block_tip = ToolTip(l2_canvas1, tag=block,
+                                    text="{}\naddr: {} - {}".format(frag.node, frag.addr, frag.addr + frag.size))
+            # ========= addr occupancy ============
+            l2_canvas2.delete('all')
+            scale = time_scale.get()
+            time = self.recorder.time_stamp[t]
+            time_interval = [time - 100 * 2 ** scale, time + 100 * 2 ** scale]
+            stamp_begin = max(0, upper_bound(self.recorder.time_stamp, time_interval[0]) - 1)
+            stamp_end = upper_bound(self.recorder.time_stamp, time_interval[1])
+            for i in range(5):
+                l2_canvas2.create_line(0, s * (140 - i * 30), length, s * (140 - i * 30), fill='gray', dash=(4, 4))
+                l2_canvas2.create_text(20, s * (130 - i * 30), text="{}%".format(i * 20))
+            last_o = 0
+            last_h = 150
+            for t in range(stamp_begin, stamp_end):
+                total_size = 0
+                frags = self.recorder.states[t].L2_frags
+                for frag in frags:
+                    total_size += frag.size
+                o = length * (self.recorder.time_stamp[t] - time_interval[0]) / (
+                            time_interval[1] - time_interval[0])
+                h = s * 140 * (1 - total_size / L2_TOTAL_SIZE)
+                rate = l2_canvas2.create_oval(o - 5, h - 5, o + 5, h + 5, fill="brown")
+                ToolTip(l2_canvas2, tag=rate, text="{:.2f}%".format(100 * total_size / L2_TOTAL_SIZE))
+                # l2_canvas2.create_text(o, h-15, text="{:.2f}%".format(100 * total_size / L1_TOTAL_SIZE))
+                l2_canvas2.create_line(o, h, last_o, last_h, fill='gray')  # , dash=(4, 4)
+                last_o = o
+                last_h = h
 
         def change_l1():
-            l1_canvas.delete('all')
-            l1_canvas.clipboard_clear()
+            # ========= real addr  ============
+            l1_canvas1.delete('all')
+            l1_canvas1.clipboard_clear()
             t = stamp.get()
             frags = self.recorder.states[t].L1_frags
             for frag in frags:
-                left = int(length * frag.addr / L1_TOTAL_SIZE) + 3
-                right = int(length * (frag.addr + frag.size) / L1_TOTAL_SIZE) + 3
-                block = l1_canvas.create_rectangle(left, 0, right, s*150,
-                                                   fill=colors[stream_idx[self.recorder.node_stream_map[frag.node]]])
-                block_tip = ToolTip(l1_canvas, tag=block, text="{}\naddr: {} - {}".format(frag.node, frag.addr, frag.addr + frag.size))
+                left = length * frag.addr / L1_TOTAL_SIZE + 3
+                right = length * (frag.addr + frag.size) / L1_TOTAL_SIZE + 3
+                block = l1_canvas1.create_rectangle(left, 0, right, s*150,
+                                                    fill=colors[stream_idx[self.recorder.node_stream_map[frag.node]]])
+                block_tip = ToolTip(l1_canvas1, tag=block,
+                                    text="{}\naddr: {} - {}".format(frag.node, frag.addr, frag.addr + frag.size))
+            # ========= addr occupancy ============
+            l1_canvas2.delete('all')
+            scale = time_scale.get()
+            time = self.recorder.time_stamp[t]
+            time_interval = [time - 100 * 2 ** scale, time + 100 * 2 ** scale]
+            stamp_begin = max(0, upper_bound(self.recorder.time_stamp, time_interval[0]) - 1)
+            stamp_end = upper_bound(self.recorder.time_stamp, time_interval[1])
+            for i in range(5):
+                l1_canvas2.create_line(0, s*(150-i*30), length, s*(150-i*30), fill='gray', dash=(4, 4))
+                l1_canvas2.create_text(20, s*(140-i*30), text="{}%".format(i*20))
+            last_o = 0
+            last_h = 150
+            for t in range(stamp_begin, stamp_end):
+                total_size = 0
+                frags = self.recorder.states[t].L1_frags
+                for frag in frags:
+                    total_size += frag.size
+                o = length * (self.recorder.time_stamp[t] - time_interval[0]) / (time_interval[1] - time_interval[0])
+                h = s * 150 * (1 - total_size / L1_TOTAL_SIZE)
+                rate = l1_canvas2.create_oval(o-5, h-5, o+5, h+5, fill="green")
+                ToolTip(l1_canvas2, tag=rate, text="{:.2f}%".format(100 * total_size / L1_TOTAL_SIZE))
+                # l1_canvas2.create_text(o, h-15, text="{:.2f}%".format(100 * total_size / L1_TOTAL_SIZE))
+                l1_canvas2.create_line(o, h, last_o, last_h, fill='gray')  # , dash=(4, 4)
+                last_o = o
+                last_h = h
+
 
         def change_cost():
             cost_canvas.delete('all')
@@ -98,10 +181,10 @@ class UI:
                     if task.node in task_set:
                         continue
                     task_set.add(task.node)
-                    left = int(length * (task.start - time_interval[0]) / (time_interval[1] - time_interval[0]))
-                    right = int(length * (task.end - time_interval[0]) / (time_interval[1] - time_interval[0]))
-                    top = int(s*30 * stream_idx[task.stream])
-                    down = top + 23
+                    left = length * (task.start - time_interval[0]) / (time_interval[1] - time_interval[0])
+                    right = length * (task.end - time_interval[0]) / (time_interval[1] - time_interval[0])
+                    top = s*30 * stream_idx[task.stream]
+                    down = top + s*24
                     block = cost_canvas.create_rectangle(left, top, right, down, fill=colors[stream_idx[task.stream]])
                     if len(task.opType) * 8 < right - left:
                         cost_canvas.create_text((left + right) // 2, (top + down) // 2, text=task.opType)
@@ -131,6 +214,41 @@ class UI:
         interval_scale.place(x=left+length+15, y=s*660)
         Label(frame, text="scale").place(x=left+length-15, y=s*750)
 
+    def add_topLevel(self):
+        topwindow = Toplevel(width=350)
+        topwindow.title("设置窗口大小")
+
+        Label(topwindow, text="设置高度:").pack()
+        height_chosen = ttk.Combobox(topwindow, width=40)
+        height_list = [500, 600, 700, 800, 900, 1000]
+        height_chosen['values'] = height_list
+        height_chosen.pack(side=TOP, expand=YES)
+        height_chosen["state"] = "readonly"
+        height_chosen.set(800)
+        height_chosen.bind("<<ComboboxSelected>>")  # 绑定事件
+
+        Label(topwindow, text="设置宽度:").pack()
+        width_chosen = ttk.Combobox(topwindow, width=40)
+        width_list = [600, 750, 900, 1080, 1200, 1400]
+        width_chosen['values'] = width_list
+        width_chosen.pack(side=TOP, expand=YES)
+        width_chosen["state"] = "readonly"
+        width_chosen.set(900)
+        width_chosen.bind("<<ComboboxSelected>>")  # 绑定事件
+        def set_and_quit():
+            self.height = int(height_chosen.get())
+            self.width = int(width_chosen.get())
+
+            self.general_feedback("SUCCESS", "已修改高度为: {}, 宽度为: {}".
+                                  format(str(height_chosen.get()), str(width_chosen.get())))
+            topwindow.destroy()
+            self.frame_mid.destroy()
+            self.frame_mid = Frame(self.main_page, width=self.width, height=self.height)
+            self.frame_mid.pack()
+            self.make_frame_mid(self.frame_mid)
+
+        Button(topwindow, text="确定", command=set_and_quit).pack()
+
     def create_main_page(self):
         self.main_page.grid(row=0, column=0, sticky="nsew")
         menu = Menu(self.main_page)
@@ -148,13 +266,19 @@ class UI:
         menu.add_cascade(label="File", menu=submenu)
         self.top.config(menu=menu)
 
-        frame_mid = Frame(self.main_page)
-        frame_mid.pack()
-        frame_mid.config(width=self.width, height=self.height)
+        submenu = Menu(menu, tearoff=0)
+        submenu.add_command(label="设置窗口尺寸", command=self.add_topLevel)
+        submenu.add_command(label="设置配色", command=lambda: self.general_feedback("ERROR", "unavailable"))
+        menu.add_cascade(label="Setting", menu=submenu)
+
+        self.frame_mid = Frame(self.main_page)
+        self.frame_mid.pack()
+        self.height = min(self.height, self.top.winfo_screenheight())
+        self.frame_mid.config(width=self.width, height=self.height)
         # v = Scrollbar(frame_mid)
         # v.place(x=800, y=0)
 
-        self.make_frame_mid(frame_mid)
+        self.make_frame_mid(self.frame_mid)
 
 
 if __name__ == "__main__":
