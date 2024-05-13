@@ -100,8 +100,8 @@ class CostRecorder:
     def __init__(self):
         self.states = []
         self.recs = []
-        self.time_stamp = []
-        self.time_map = {}  # time_stamp -> time
+        self.time_stamp = []  # time_stamp -> time
+        self.time_map = {}   # time -> time_stamp
         self.node_stream_map = {}
 
     def init(self):
@@ -141,6 +141,13 @@ class CostRecorder:
             self.time_map[self.time_stamp[i]] = i
         print("total stamp num: ", len(self.time_stamp))
 
+    def append_frag(self, buffer_frags, t, new_frag, op_type):
+        for i, current_frag in enumerate(buffer_frags):
+            if current_frag.addr == new_frag.addr and op_type == "Deslice":
+                buffer_frags[i] = new_frag
+                return
+        buffer_frags.append(new_frag)
+
     def cal_states(self):
         max_time = max([rec.deq for rec in self.recs])
         max_stamp = max([self.time_map[rec.deq] for rec in self.recs])
@@ -154,9 +161,9 @@ class CostRecorder:
             for t in range(self.time_map[rec.start], self.time_map[rec.deq]):
                 new_frag = Fragment(rec.node, rec.ofmLoc, rec.cid, rec.addr, rec.size)
                 if new_frag.buffer == "L1" and new_frag.cid == 0:
-                    self.states[t].L1_frags.append(new_frag)
+                    self.append_frag(self.states[t].L1_frags, t, new_frag, rec.name)
                 elif new_frag.buffer == "L2" and new_frag.cid <= 0:
-                    self.states[t].L2_frags.append(new_frag)
+                    self.append_frag(self.states[t].L2_frags, t, new_frag, rec.name)
             for t in range(self.time_map[rec.start], self.time_map[rec.start + rec.dur]):
                 if rec.cid <= 0:
                     new_task = Task(rec.node, rec.name, rec.group, rec.start, rec.start + rec.dur)
@@ -169,7 +176,7 @@ class CostRecorder:
             pre_addr = 0
             for frag in frags:
                 if frag.addr < pre_addr:
-                    print("ERROR: overlap")
+                    print("ERROR: overlap", frag.buffer, frag.addr)
                     return True
                 pre_addr = frag.addr + frag.size
             return False
@@ -193,7 +200,7 @@ class CostRecorder:
 if __name__ == '__main__':
 
     recorder = CostRecorder()
-    recorder.run("../data/new_static_xea.csv")
+    # recorder.run("../data/new_static_xea.csv")
     ui = UI(recorder)
 
 

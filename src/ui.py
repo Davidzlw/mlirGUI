@@ -14,7 +14,7 @@ class UI:
     def __init__(self, recorder):
         self.recorder = recorder
         self.top = tkinter.Tk()
-        self.top.title("L1/L2 Addr Analyzer 1.4")
+        self.top.title("L1/L2 Addr Analyzer ver1.6")
         # top.geometry("700x400")
         self.width = 1400
         self.height = 800
@@ -26,6 +26,37 @@ class UI:
 
     def general_feedback(self, title, str1):
         messagebox.showinfo(title, str1)
+
+    def show_frags(self, buffer, t):
+        table = Tk()
+        table.title("{}地址占用表(cycle={}时刻)".format(buffer, self.recorder.time_stamp[t]))
+
+        scrollbar = Scrollbar(table)
+        scrollbar.pack(side=RIGHT, fill=Y)
+
+        columns = ("node", "cid", "addr", "size")
+        treeview = ttk.Treeview(table, height=20, show="headings", columns=columns, yscrollcommand=scrollbar.set)  # 表格
+
+        treeview.column("node", width=400, anchor='w')
+        treeview.column("cid", width=50, anchor='center')
+        treeview.column("addr", width=100, anchor='center')
+        treeview.column("size", width=100, anchor='center')
+
+        treeview.heading("node", text="node")
+        treeview.heading("cid", text="cid")
+        treeview.heading("addr", text="addr")
+        treeview.heading("size", text="size")
+
+        treeview.pack(side=TOP, fill=BOTH)
+        scrollbar.config(command=treeview.yview)
+
+        def fill_tabel():
+            frags = self.recorder.states[t].L1_frags if buffer == "L1" else self.recorder.states[t].L2_frags
+            frags = sorted(frags, key=lambda x: x.addr)
+            for i in range(len(frags)):
+                treeview.insert('', i, values=(frags[i].node, frags[i].cid, frags[i].addr, frags[i].size))
+
+        fill_tabel()
 
     def make_frame_mid(self, frame):
         # ========= canvas ============
@@ -39,7 +70,7 @@ class UI:
         l2_frame = LabelFrame(frame, bd=2, text="L2 addr", relief=SUNKEN)
         l2_frame.place(x=5, y=s*5, height=s*180, width=self.width-10)
         l2_display_choice = ttk.Notebook(l2_frame, style='lefttab.TNotebook')
-        l2_display_choice.place(x=5, y=s*5, height=s*150, width=self.width-15)
+        l2_display_choice.place(x=5, y=s*5, height=s*150, width=self.width-75)
         l2_sub_frame1 = Frame(l2_display_choice)
         l2_canvas1 = Canvas(l2_sub_frame1, bd=0, bg='#ccc', height=s*150, width=length)
         l2_canvas1.place(x=20, y=0)
@@ -48,14 +79,15 @@ class UI:
         l2_canvas2.place(x=20, y=0)
         l2_display_choice.add(l2_sub_frame1, text='real\naddr')
         l2_display_choice.add(l2_sub_frame2, text='addr\noccu')
-        # Label(frame, text="0").place(x=left, y=s*180)
-        # Label(frame, text="32M").place(x=left+length-15, y=s*180)
+        Label(l2_sub_frame1, text="32M", bg='#ccc').place(x=left+length-65, y=s*130)
+        Button(l2_frame, text="detail", command=lambda: self.show_frags("L2", stamp.get()))\
+            .place(x=left+length+15, y=s*100)
 
         # ========= l1 frame ============
         l1_frame = LabelFrame(frame, bd=2, text="L1 addr", relief=SUNKEN)
         l1_frame.place(x=5, y=s*190, height=s*185, width=self.width-10)
         l1_display_choice = ttk.Notebook(l1_frame, style='lefttab.TNotebook')
-        l1_display_choice.place(x=5, y=s*5, height=s*150, width=self.width-15)
+        l1_display_choice.place(x=5, y=s*5, height=s*150, width=self.width-75)
         l1_sub_frame1 = Frame(l1_display_choice)
         l1_canvas1 = Canvas(l1_sub_frame1, bd=0, bg='#ccc', height=s*150, width=length)
         l1_canvas1.place(x=20, y=0)
@@ -64,11 +96,12 @@ class UI:
         l1_canvas2.place(x=20, y=0)
         l1_display_choice.add(l1_sub_frame1, text='real\naddr')
         l1_display_choice.add(l1_sub_frame2, text='addr\noccu')
-        # Label(frame, text="0").place(x=left, y=s*370)
-        # Label(frame, text="6M").place(x=left+length-15, y=s*370)
+        Label(l1_sub_frame1, text="6M", bg='#ccc').place(x=left+length-70, y=s*130)
+        Button(l1_frame, text="detail", command=lambda: self.show_frags("L1", stamp.get()))\
+            .place(x=left+length+15, y=s*100)
 
         # ========= cost frame ============
-        cost_frame = LabelFrame(frame, bd=2, text="cost model", relief=SUNKEN)
+        cost_frame = LabelFrame(frame, bd=2, text="cost model profiling", relief=SUNKEN)
         cost_frame.place(x=5, y=s*380, height=s*290, width=self.width-10)
         cost_canvas = Canvas(cost_frame, bd=2, bg='#ccc', height=s*270, width=length)
         cost_canvas.place(x=left, y=0)
@@ -106,6 +139,7 @@ class UI:
             for i in range(5):
                 l2_canvas2.create_line(0, s * (140 - i * 30), length, s * (140 - i * 30), fill='gray', dash=(4, 4))
                 l2_canvas2.create_text(20, s * (130 - i * 30), text="{}%".format(i * 20))
+            time_line = l2_canvas2.create_line(length / 2, 0, length / 2, s * 150, fill='gray', dash=(4, 4))
             last_o = 0
             last_h = 150
             for t in range(stamp_begin, stamp_end):
@@ -116,6 +150,8 @@ class UI:
                 o = length * (self.recorder.time_stamp[t] - time_interval[0]) / (
                             time_interval[1] - time_interval[0])
                 h = s * 140 * (1 - total_size / L2_TOTAL_SIZE)
+                if total_size / L2_TOTAL_SIZE > 0.9:
+                    print(self.recorder.time_stamp[t], [frag.size for frag in frags], total_size / L2_TOTAL_SIZE)
                 rate = l2_canvas2.create_oval(o - 5, h - 5, o + 5, h + 5, fill="brown")
                 ToolTip(l2_canvas2, tag=rate, text="{:.2f}%".format(100 * total_size / L2_TOTAL_SIZE))
                 # l2_canvas2.create_text(o, h-15, text="{:.2f}%".format(100 * total_size / L1_TOTAL_SIZE))
@@ -146,6 +182,7 @@ class UI:
             for i in range(5):
                 l1_canvas2.create_line(0, s*(150-i*30), length, s*(150-i*30), fill='gray', dash=(4, 4))
                 l1_canvas2.create_text(20, s*(140-i*30), text="{}%".format(i*20))
+            time_line = l1_canvas2.create_line(length / 2, 0, length / 2, s * 150, fill='gray', dash=(4, 4))
             last_o = 0
             last_h = 150
             for t in range(stamp_begin, stamp_end):
@@ -166,7 +203,7 @@ class UI:
         def change_cost():
             cost_canvas.delete('all')
             cost_canvas.clipboard_clear()
-            time_line = cost_canvas.create_line(length / 2, 0, length / 2, s*250, fill='gray', dash=(4, 4))
+            time_line = cost_canvas.create_line(length / 2, 0, length / 2, s*270, fill='gray', dash=(4, 4))
             t = stamp.get()
             scale = time_scale.get()
             time = self.recorder.time_stamp[t]
@@ -207,12 +244,27 @@ class UI:
                             command=change_time, variable=stamp)
         self.stamp_scale.set(0)
         self.stamp_scale.place(x=left, y=s*680, width=length)
+
         interval_scale = Scale(frame, activebackground="green", from_=0, to=12, variable=time_scale,
                                resolution=1, orient=VERTICAL, tickinterval=0, length=s*100, width=20,
                                command=change_time)
         interval_scale.set(0)
         interval_scale.place(x=left+length+15, y=s*660)
         Label(frame, text="scale").place(x=left+length-15, y=s*750)
+
+        def stamp_add(event):
+            if event.delta > 0 or event.keysym == "Left":
+                self.stamp_scale.set(stamp.get() - 1)
+            elif event.delta < 0 or event.keysym == "Right":
+                self.stamp_scale.set(stamp.get() + 1)
+            elif event.keysym == "Up":
+                interval_scale.set(time_scale.get() - 1)
+            elif event.keysym == "Down":
+                interval_scale.set(time_scale.get() + 1)
+
+        cost_canvas.bind("<MouseWheel>", stamp_add)
+        cost_frame.bind("<Key>", stamp_add)
+        cost_frame.focus_set()
 
     def add_topLevel(self):
         topwindow = Toplevel(width=350)
