@@ -150,8 +150,8 @@ class UI:
                 o = length * (self.recorder.time_stamp[t] - time_interval[0]) / (
                             time_interval[1] - time_interval[0])
                 h = s * 140 * (1 - total_size / L2_TOTAL_SIZE)
-                if total_size / L2_TOTAL_SIZE > 0.9:
-                    print(self.recorder.time_stamp[t], [frag.size for frag in frags], total_size / L2_TOTAL_SIZE)
+                # if total_size / L2_TOTAL_SIZE > 0.9:
+                #     print(self.recorder.time_stamp[t], [frag.size for frag in frags], total_size / L2_TOTAL_SIZE)
                 rate = l2_canvas2.create_oval(o - 5, h - 5, o + 5, h + 5, fill="brown")
                 ToolTip(l2_canvas2, tag=rate, text="{:.2f}%".format(100 * total_size / L2_TOTAL_SIZE))
                 # l2_canvas2.create_text(o, h-15, text="{:.2f}%".format(100 * total_size / L1_TOTAL_SIZE))
@@ -198,7 +198,6 @@ class UI:
                 l1_canvas2.create_line(o, h, last_o, last_h, fill='gray')  # , dash=(4, 4)
                 last_o = o
                 last_h = h
-
 
         def change_cost():
             cost_canvas.delete('all')
@@ -301,6 +300,27 @@ class UI:
 
         Button(topwindow, text="确定", command=set_and_quit).pack()
 
+    def jump_to_node(self):
+        topwindow = Toplevel(width=350)
+        topwindow.title("jump to node")
+
+        Label(topwindow, text="Node name:").pack()
+        name = StringVar()
+        node_name = Entry(topwindow, textvariable=name)
+        node_name.pack()
+
+        def set_and_quit():
+            if name.get() in self.recorder.node_start_map:
+                self.general_feedback("SUCCESS", "start time: {}".format(self.recorder.node_start_map[name.get()]))
+                stamp = self.recorder.time_map[self.recorder.node_start_map[name.get()]]
+                self.stamp_scale.set(stamp)
+                topwindow.destroy()
+            else:
+                self.general_feedback("FAIL", "no node named {}".format(name.get()))
+
+        Button(topwindow, text="确定", command=set_and_quit).pack()
+
+
     def create_main_page(self):
         self.main_page.grid(row=0, column=0, sticky="nsew")
         menu = Menu(self.main_page)
@@ -322,6 +342,10 @@ class UI:
         submenu.add_command(label="设置窗口尺寸", command=self.add_topLevel)
         submenu.add_command(label="设置配色", command=lambda: self.general_feedback("ERROR", "unavailable"))
         menu.add_cascade(label="Setting", menu=submenu)
+
+        submenu = Menu(menu, tearoff=0)
+        submenu.add_command(label="查看Node", command=self.jump_to_node)
+        menu.add_cascade(label="Search", menu=submenu)
 
         self.frame_mid = Frame(self.main_page)
         self.frame_mid.pack()

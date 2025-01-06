@@ -103,6 +103,7 @@ class CostRecorder:
         self.time_stamp = []  # time_stamp -> time
         self.time_map = {}   # time -> time_stamp
         self.node_stream_map = {}
+        self.node_start_map = {}
 
     def init(self):
         self.states = []
@@ -110,6 +111,7 @@ class CostRecorder:
         self.time_stamp = []
         self.time_map = {}
         self.node_stream_map = {}
+        self.node_start_map = {}
 
     def read_file(self, path):
         with open(path, newline='') as f:
@@ -156,6 +158,7 @@ class CostRecorder:
 
         for rec in self.recs:
             self.node_stream_map[rec.node] = rec.group
+            self.node_start_map[rec.node] = rec.start
             if rec.name == "View":
                 continue
             for t in range(self.time_map[rec.start], self.time_map[rec.deq]):
@@ -185,7 +188,8 @@ class CostRecorder:
             l1_frags = sorted([frag for frag in state.L1_frags], key=lambda x: x.addr)
             l2_frags = sorted([frag for frag in state.L2_frags], key=lambda x: x.addr)
             if find_overlap(l1_frags) or find_overlap(l2_frags):
-                return
+                print("time", state.time, self.time_stamp[state.time])
+                # return
         print("SUCC: check pass!")
 
     def run(self, path):
@@ -200,8 +204,8 @@ class CostRecorder:
 if __name__ == '__main__':
 
     recorder = CostRecorder()
-    # recorder.run("../data/new_static_xea.csv")
+    # recorder.run("../data/xea_sync-op-gen_llama_events.csv")
+    recorder.run("F:/data/costModel/xea_engine-gen_preprocess_events.csv")
+    # recorder.run("F:/data/costModel/xea_engine-gen_llama_events.csv")
     ui = UI(recorder)
-
-
 
