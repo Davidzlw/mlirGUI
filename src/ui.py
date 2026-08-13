@@ -34,16 +34,16 @@ class UI:
         scrollbar = Scrollbar(table)
         scrollbar.pack(side=RIGHT, fill=Y)
 
-        columns = ("node", "cid", "addr", "size")
+        columns = ("op_name", "core_id", "addr", "size")
         treeview = ttk.Treeview(table, height=20, show="headings", columns=columns, yscrollcommand=scrollbar.set)  # 表格
 
-        treeview.column("node", width=400, anchor='w')
-        treeview.column("cid", width=50, anchor='center')
+        treeview.column("op_name", width=400, anchor='w')
+        treeview.column("core_id", width=50, anchor='center')
         treeview.column("addr", width=100, anchor='center')
         treeview.column("size", width=100, anchor='center')
 
-        treeview.heading("node", text="node")
-        treeview.heading("cid", text="cid")
+        treeview.heading("op_name", text="op_name")
+        treeview.heading("core_id", text="core_id")
         treeview.heading("addr", text="addr")
         treeview.heading("size", text="size")
 
@@ -54,7 +54,7 @@ class UI:
             frags = self.recorder.states[t].L1_frags if buffer == "L1" else self.recorder.states[t].L2_frags
             frags = sorted(frags, key=lambda x: x.addr)
             for i in range(len(frags)):
-                treeview.insert('', i, values=(frags[i].node, frags[i].cid, frags[i].addr, frags[i].size))
+                treeview.insert('', i, values=(frags[i].op_name, frags[i].core_id, frags[i].addr, frags[i].size))
 
         fill_tabel()
 
@@ -126,9 +126,9 @@ class UI:
                 left = length * frag.addr / L2_TOTAL_SIZE + 3  # avoid missing addr close to 0
                 right = length * (frag.addr + frag.size) / L2_TOTAL_SIZE + 3
                 block = l2_canvas1.create_rectangle(left, 0, right, s*150,
-                                                    fill=colors[stream_idx[self.recorder.node_stream_map[frag.node]]])
+                                                    fill=colors[stream_idx[self.recorder.node_stream_map[frag.op_name]]])
                 block_tip = ToolTip(l2_canvas1, tag=block,
-                                    text="{}\naddr: {} - {}".format(frag.node, frag.addr, frag.addr + frag.size))
+                                    text="{}\naddr: {} - {}".format(frag.op_name, frag.addr, frag.addr + frag.size))
             # ========= addr occupancy ============
             l2_canvas2.delete('all')
             scale = time_scale.get()
@@ -169,9 +169,9 @@ class UI:
                 left = length * frag.addr / L1_TOTAL_SIZE + 3
                 right = length * (frag.addr + frag.size) / L1_TOTAL_SIZE + 3
                 block = l1_canvas1.create_rectangle(left, 0, right, s*150,
-                                                    fill=colors[stream_idx[self.recorder.node_stream_map[frag.node]]])
+                                                    fill=colors[stream_idx[self.recorder.node_stream_map[frag.op_name]]])
                 block_tip = ToolTip(l1_canvas1, tag=block,
-                                    text="{}\naddr: {} - {}".format(frag.node, frag.addr, frag.addr + frag.size))
+                                    text="{}\naddr: {} - {}".format(frag.op_name, frag.addr, frag.addr + frag.size))
             # ========= addr occupancy ============
             l1_canvas2.delete('all')
             scale = time_scale.get()
@@ -214,9 +214,9 @@ class UI:
             for t in range(stamp_begin, stamp_end):
                 tasks = self.recorder.states[t].tasks
                 for task in tasks:
-                    if task.node in task_set:
+                    if task.op_name in task_set:
                         continue
-                    task_set.add(task.node)
+                    task_set.add(task.op_name)
                     left = length * (task.start - time_interval[0]) / (time_interval[1] - time_interval[0])
                     right = length * (task.end - time_interval[0]) / (time_interval[1] - time_interval[0])
                     top = s*30 * stream_idx[task.stream]
@@ -225,7 +225,7 @@ class UI:
                     if len(task.opType) * 8 < right - left:
                         cost_canvas.create_text((left + right) // 2, (top + down) // 2, text=task.opType)
                     block_tip = ToolTip(cost_canvas, tag=block,
-                                        text="{}\ncycle: {} - {}".format(task.node, task.start, task.end))
+                                        text="{}\ncycle: {} - {}".format(task.op_name, task.start, task.end))
 
         def change_time(arg):
             if not self.recorder.recs:
@@ -302,9 +302,9 @@ class UI:
 
     def jump_to_node(self):
         topwindow = Toplevel(width=350)
-        topwindow.title("jump to node")
+        topwindow.title("jump to op_name")
 
-        Label(topwindow, text="Node name:").pack()
+        Label(topwindow, text="Op name:").pack()
         name = StringVar()
         node_name = Entry(topwindow, textvariable=name)
         node_name.pack()
@@ -316,7 +316,7 @@ class UI:
                 self.stamp_scale.set(stamp)
                 topwindow.destroy()
             else:
-                self.general_feedback("FAIL", "no node named {}".format(name.get()))
+                self.general_feedback("FAIL", "no op named {}".format(name.get()))
 
         Button(topwindow, text="确定", command=set_and_quit).pack()
 

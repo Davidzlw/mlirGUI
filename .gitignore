@@ -1,0 +1,16 @@
+# Data
+data/
+
+# Build & Dist
+build/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+
+# PyInstaller
+*.spec
+
+# IDE
+.idea/

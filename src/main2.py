@@ -44,14 +44,14 @@ class MLIR:
 class Record:
     def __init__(self, ctx, start, dur, deq, cname, cid, name, node, group, send, wait, addr, size):
         self.ctx = int(ctx)
-        self.start = int(start)
-        self.dur = int(dur)
-        self.deq = int(deq)
-        self.cname = cname
-        self.cid = int(cid) if cid else -1
-        self.name = name
-        self.node = node
-        self.group = group
+        self.start = int(start)  # start_time
+        self.dur = int(dur)  # duration time
+        self.deq = int(deq)  # dequeue time
+        self.engine = cname  # engine
+        self.core_id = int(cid) if cid else -1  # core_id
+        self.op_type = name  # op_type
+        self.op_name = node  # op_name
+        self.stream = group  # stream
         self.send = send
         self.wait = wait
         self.addr = int(addr)
@@ -62,26 +62,26 @@ class Record:
         # self.attrs = attrs
 
     def set_buffer_loc(self):
-        if self.group == "Workload":
+        if self.stream == "Workload":
             self.ifmLoc = "L1"
             self.ofmLoc = "L1"
         else:
-            self.ifmLoc = self.group.split(">>")[0]
-            self.ofmLoc = self.group.split(">>")[1]
+            self.ifmLoc = self.stream.split(">>")[0]
+            self.ofmLoc = self.stream.split(">>")[1]
 
 
 class Fragment:
-    def __init__(self, node, buffer, cid, addr, size):
-        self.node = node
+    def __init__(self, op_name, buffer, core_id, addr, size):
+        self.op_name = op_name
         self.buffer = buffer
-        self.cid = cid
+        self.core_id = core_id
         self.addr = addr
         self.size = size
 
 
 class Task:
-    def __init__(self, node, op_type, stream, start, end):
-        self.node = node
+    def __init__(self, op_name, op_type, stream, start, end):
+        self.op_name = op_name
         self.opType = op_type
         self.stream = stream
         self.start = start
@@ -125,11 +125,17 @@ class CostRecorder:
     def show_records(self):
         print("total records num: ", len(self.recs))
         cnt = 10  # show num
+        cnt_map = {}
         for rec in self.recs:
-            print(rec.node, self.time_map[rec.start], self.time_map[rec.deq], rec.ofmLoc, rec.cid, rec.addr, rec.size)
-            cnt -= 1
-            if cnt == 0:
-                break
+            if rec.ifmLoc + ">>" + rec.ofmLoc in cnt_map:
+                cnt_map[rec.ifmLoc + ">>" + rec.ofmLoc] += 1
+            else:
+                cnt_map[rec.ifmLoc + ">>" + rec.ofmLoc] = 1
+            # print(rec.op_name, self.time_map[rec.start], self.time_map[rec.deq], rec.ofmLoc, rec.core_id, rec.addr, rec.size)
+            # cnt -= 1
+            # if cnt == 0:
+            #     break
+        print(cnt_map)
 
     def cal_time_map(self):
         time_set = set()
@@ -157,19 +163,19 @@ class CostRecorder:
             self.states.append(State(t))
 
         for rec in self.recs:
-            self.node_stream_map[rec.node] = rec.group
-            self.node_start_map[rec.node] = rec.start
-            if rec.name == "View":
+            self.node_stream_map[rec.op_name] = rec.stream
+            self.node_start_map[rec.op_name] = rec.start
+            if rec.op_type == "View":
                 continue
             for t in range(self.time_map[rec.start], self.time_map[rec.deq]):
-                new_frag = Fragment(rec.node, rec.ofmLoc, rec.cid, rec.addr, rec.size)
-                if new_frag.buffer == "L1" and new_frag.cid == 0:
-                    self.append_frag(self.states[t].L1_frags, t, new_frag, rec.name)
-                elif new_frag.buffer == "L2" and new_frag.cid <= 0:
-                    self.append_frag(self.states[t].L2_frags, t, new_frag, rec.name)
+                new_frag = Fragment(rec.op_name, rec.ofmLoc, rec.core_id, rec.addr, rec.size)
+                if new_frag.buffer == "L1" and new_frag.core_id == 0:
+                    self.append_frag(self.states[t].L1_frags, t, new_frag, rec.op_type)
+                elif new_frag.buffer == "L2" and new_frag.core_id <= 0:
+                    self.append_frag(self.states[t].L2_frags, t, new_frag, rec.op_type)
             for t in range(self.time_map[rec.start], self.time_map[rec.start + rec.dur]):
-                if rec.cid <= 0:
-                    new_task = Task(rec.node, rec.name, rec.group, rec.start, rec.start + rec.dur)
+                if rec.core_id <= 0:
+                    new_task = Task(rec.op_name, rec.op_type, rec.stream, rec.start, rec.start + rec.dur)
                     self.states[t].tasks.append(new_task)
 
     def check_legal(self):
@@ -205,7 +211,7 @@ if __name__ == '__main__':
 
     recorder = CostRecorder()
     # recorder.run("../data/xea_sync-op-gen_llama_events.csv")
-    recorder.run("F:/data/costModel/xea_engine-gen_preprocess_events.csv")
-    # recorder.run("F:/data/costModel/xea_engine-gen_llama_events.csv")
+    recorder.run("F:/data/costModel/xea_engine-gen_events.csv")
+    # recorder.run("F:/data/costModel/xea_sync-op-gen_qwen_events.csv")
     ui = UI(recorder)
 
