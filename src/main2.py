@@ -149,7 +149,7 @@ class CostRecorder:
             self.time_map[self.time_stamp[i]] = i
         print("total stamp num: ", len(self.time_stamp))
 
-    def append_frag(self, buffer_frags, t, new_frag, op_type):
+    def append_frag(self, buffer_frags, new_frag, op_type):
         for i, current_frag in enumerate(buffer_frags):
             if current_frag.addr == new_frag.addr and op_type == "Deslice":
                 buffer_frags[i] = new_frag
@@ -170,9 +170,9 @@ class CostRecorder:
             for t in range(self.time_map[rec.start], self.time_map[rec.deq]):
                 new_frag = Fragment(rec.op_name, rec.ofmLoc, rec.core_id, rec.addr, rec.size)
                 if new_frag.buffer == "L1" and new_frag.core_id == 0:
-                    self.append_frag(self.states[t].L1_frags, t, new_frag, rec.op_type)
+                    self.append_frag(self.states[t].L1_frags, new_frag, rec.op_type)
                 elif new_frag.buffer == "L2" and new_frag.core_id <= 0:
-                    self.append_frag(self.states[t].L2_frags, t, new_frag, rec.op_type)
+                    self.append_frag(self.states[t].L2_frags, new_frag, rec.op_type)
             for t in range(self.time_map[rec.start], self.time_map[rec.start + rec.dur]):
                 if rec.core_id <= 0:
                     new_task = Task(rec.op_name, rec.op_type, rec.stream, rec.start, rec.start + rec.dur)
